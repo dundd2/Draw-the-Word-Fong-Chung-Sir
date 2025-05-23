@@ -1,0 +1,26 @@
+{
+ "name": "draw-the-word-fong-chung-sir",
+ "version": "1.1.1",
+ "description": "Learn how to write 'sir' in Traditional Chinese'",
+ "main": "main.js",
+ "scripts": {
+  "start": "electron .",
+  "build": "electron-builder"
+ },
+ "author": "Dundd2",
+ "license": "MIT",
+ "devDependencies": {
+  "electron": "^25.0.0",
+  "electron-builder": "^25.1.8"
+ },
+ "build": {
+  "appId": "com.fong.sir.game",
+  "win": {
+   "target": "nsis",
+   "icon": "./assets/images/icon.ico"
+  },
+  "directories": {
+   "output": "dist"
+  }
+ }
+}

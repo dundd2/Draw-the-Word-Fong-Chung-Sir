@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Draw-The-Word-Fong-Chung-Sir</title>
+    
+    <!-- Primary Meta Tags -->
+    <meta name="title" content="Draw-The-Word-Fong-Chung-Sir">
+    <meta name="description" content="Parody Game to Learn how to Draw The Word 'sir' in Traditional Chinese">
+    <meta name="keywords" content="方中sir,新紮師妹,Love Undercover,2002">
+    <!-- Mobile Web App -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="Writing Sir">
+    <meta name="theme-color" content="#2ecc71">
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="./assets/images/icon.png">
+    <link rel="apple-touch-icon" href="./assets/images/icon.png">
+    <link rel="stylesheet" href="./assets/styles.css">
+    <script src="./assets/script.js" defer></script>
+    <script src="./assets/tfjs@latest.js"></script>
+</head>
+<body>
+    <button class="language-switch" onclick="toggleLanguage()">中文 / English</button>
+    
+    <div class="container">
+        <h1 class="rainbow-title" lang="en">Draw the Chinese Word "Sir"</h1>
+        <h1 class="rainbow-title" lang="zh">點寫方中sir</h1>
+        
+        <div class="header-content">
+            <img src="./assets/images/title-image.jpg" alt="Mr. Fong" class="title-image">
+            <div class="story-container">
+                <!-- English Version -->
+                <div lang="en">
+                    <div class="dialogue">
+                        <span class="speaker">Father-in-law:</span> Well, your daughter's surname is Fong, why do you call yourself Mr. Chung?
+                    </div>
+                    <div class="dialogue">
+                        <span class="speaker">Mr. Fong:</span> You see, Chung sir is my name. My full name is Fong Chung sir, Fong Chung Shun is also our relative~
+                    </div>
+                    <div class="dialogue">
+                        <span class="speaker">Father-in-law:</span> Oh! By the way, how do you write "sir"?
+                    </div>
+                    <div class="dialogue">
+                        <span class="speaker">Fong Chung sir:</span> Oh! The character "sir": ...
+                    </div>
+                    <div class="dialogue">
+                        <span class="speaker">-From "Love Undercover" 2002</span>
+                    </div>
+                </div>
+
+                <!-- Chinese Version -->
+                <div lang="zh">
+                    <div class="dialogue">
+                        <span class="speaker">親家老爺:</span> 係啦，你個女就姓方嘅，點解你又叫自己做鍾sir呢？
+                    </div>
+                    <div class="dialogue">
+                        <span class="speaker">方中sir:</span> 係咁嘅，其實鍾sir係我個名，其實我全名叫方鍾sir，方中信都係我地啲親戚黎嘅~
+                    </div>
+                    <div class="dialogue">
+                        <span class="speaker">親家老爺:</span> 喔!啊...借問聲，個sir字點寫呢?
+                    </div>
+                    <div class="dialogue">
+                        <span class="speaker">方鍾sir:</span> 喔!個sir字啊: ...
+                    </div>
+                    <div class="dialogue">
+                        <span class="speaker">-《新紮師妹》2002</span> 
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <div class="drawing-section">
+                <div class="character-container">
+                    <div id="targetCharacter" class="target-character"></div>
+                    <canvas id="drawingCanvas" width="400" height="400"></canvas>
+                </div>
+            </div>
+            
+            <div class="controls-section">
+                <div class="controls">
+                    <div class="control-group">
+                        <input type="color" id="colorPicker" class="color-picker" value="#2196F3" title="選擇顏色">
+                        <input type="number" id="lineWidth" class="line-width" value="3" min="1" max="10" title="線條寬度">
+                    </div>
+                    <div class="button-group">
+                        <button id="undoButton" title="上一步">↩</button>
+                        <button id="resetButton" title="重置畫布">🔄</button>
+                    </div>
+                    <button id="submitButtonZh" class="submit-btn" lang="zh">提交</button>
+                    <button id="submitButtonEn" class="submit-btn" lang="en">Submit</button>
+                    <div id="feedback"></div>
+                    <div id="score">得分: 0%</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="angry-emoji">😡</div>
+    <div class="fail-overlay"></div>
+    <div class="message-overlay" id="messageOverlay"></div>
+    <div class="success-overlay" id="successOverlay"></div>
+    <img src="./assets/images/success.jpg" alt="Success" class="success-image" id="successImage">
+
+    <a href="https://github.com/dundd2/Draw-The-Word-Fong-Chung-Sir" class="github-link" target="_blank">
+        <svg class="github-icon" viewBox="0 0 16 16">
+            <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+        </svg>
+        <span lang="en">Source Code</span>
+        <span lang="zh">源代碼</span>
+    </a>
+    <audio id="winSound" preload="auto">
+        <source src="./assets/sounds/win.mp3" type="audio/mp3">
+    </audio>
+    <audio id="loseSound" preload="auto">
+        <source src="./assets/sounds/lose.mp3" type="audio/mp3">
+    </audio>
+
+    <script src="script.js"></script>
+</body>
+</html>
