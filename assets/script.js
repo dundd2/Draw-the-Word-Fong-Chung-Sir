@@ -27,6 +27,16 @@ const averageAccuracyValue = document.getElementById('averageAccuracyValue');
 const attemptCountValue = document.getElementById('attemptCountValue');
 const streakValue = document.getElementById('streakValue');
 const sessionStatsContainer = document.getElementById('sessionStats');
+const connectionStatusBanner = document.getElementById('connectionStatus');
+const dailyGoalTargetInput = document.getElementById('dailyGoalTarget');
+const dailyGoalProgressFill = document.getElementById('dailyGoalProgressFill');
+const dailyGoalLabelEn = document.getElementById('dailyGoalLabelEn');
+const dailyGoalLabelZh = document.getElementById('dailyGoalLabelZh');
+const resetDailyGoalButton = document.getElementById('resetDailyGoal');
+const practiceTipEn = document.getElementById('practiceTipEn');
+const practiceTipZh = document.getElementById('practiceTipZh');
+const nextTipButton = document.getElementById('nextTipButton');
+const attemptHistoryList = document.getElementById('attemptHistoryList');
 
 let drawing = false;
 const strokeHistory = [];
@@ -44,6 +54,50 @@ const ACCURACY_STREAK_THRESHOLD = 70;
 const REPLAY_STROKE_DELAY = 140;
 const REPLAY_DOT_HOLD = 220;
 const MIN_REPLAY_SEGMENT_DURATION = 16;
+const DAILY_GOAL_STORAGE_KEY = 'sir-drawing-daily-goal-v1';
+const DAILY_GOAL_SETTINGS_STORAGE_KEY = 'sir-drawing-daily-goal-settings-v1';
+const ATTEMPT_HISTORY_STORAGE_KEY = 'sir-drawing-attempt-history-v1';
+const TIP_STORAGE_KEY = 'sir-drawing-tip-index-v1';
+const DEFAULT_DAILY_TARGET = 5;
+const ATTEMPT_HISTORY_LIMIT = 7;
+
+const PRACTICE_TIPS = [
+    {
+        en: 'Slow your strokes near the corners so each turn stays crisp.',
+        zh: '畫轉角時放慢節奏，令每個轉彎都夠利落。'
+    },
+    {
+        en: 'Start with lighter pressure, then press harder once the stroke feels steady.',
+        zh: '先用輕力度起筆，穩定之後再加力描線。'
+    },
+    {
+        en: 'Use the replay feature to spot where your lines drift from the guide.',
+        zh: '用重播功能睇下邊啲筆劃偏離樣板。'
+    },
+    {
+        en: 'Lift your finger between strokes to avoid unintended smudges.',
+        zh: '每筆之間抬高手指，避免拖出多餘線條。'
+    },
+    {
+        en: 'Aim for smooth breathing while drawing — it keeps your hand steady.',
+        zh: '畫畫時保持均勻呼吸，有助穩定手勢。'
+    },
+    {
+        en: 'Focus on overlapping the guide at 70% or more to keep a hot streak going.',
+        zh: '重點覆蓋樣板七成以上，輕鬆保持連勝紀錄。'
+    }
+];
+
+const CONNECTION_MESSAGES = {
+    offline: {
+        en: 'You are working offline. Saved progress and guides are still available.',
+        zh: '目前處於離線狀態，已儲存嘅進度同指引仍然可用。'
+    },
+    online: {
+        en: 'You are back online. Cloud-enabled features are refreshed.',
+        zh: '已重新連線，雲端功能已經更新。'
+    }
+};
 
 const DEFAULT_SESSION_STATS = {
     attempts: 0,
@@ -55,6 +109,11 @@ const DEFAULT_SESSION_STATS = {
 };
 
 let sessionStats = { ...DEFAULT_SESSION_STATS };
+let dailyGoalState = null;
+let dailyGoalSettings = null;
+let attemptHistory = [];
+let currentTipIndex = 0;
+let connectionStatusTimeoutId = null;
 
 // Initialize canvas settings
 ctx.strokeStyle = colorPicker.value;
@@ -83,6 +142,31 @@ function formatPercentDisplay(value) {
         return `${Math.round(normalized)}%`;
     }
     return `${normalized.toFixed(1)}%`;
+}
+
+function getCurrentLang() {
+    return document.documentElement.lang === 'zh' ? 'zh' : 'en';
+}
+
+function updateLanguageVisibility() {
+    const currentLang = getCurrentLang();
+    document.querySelectorAll('[lang]').forEach(el => {
+        if (el.getAttribute('lang') === currentLang) {
+            el.classList.add('active');
+        } else {
+            el.classList.remove('active');
+        }
+    });
+}
+
+function updateLocalizedButton(button) {
+    if (!button) return;
+    const currentLang = getCurrentLang();
+    const labelKey = currentLang === 'zh' ? 'labelZh' : 'labelEn';
+    const label = button.dataset[labelKey];
+    if (label) {
+        button.textContent = label;
+    }
 }
 
 function loadSessionStats() {
@@ -139,6 +223,370 @@ function updateSessionStatsUI() {
     }
 }
 
+function getTodayKey() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function loadDailyGoalSettings() {
+    const defaults = { target: DEFAULT_DAILY_TARGET };
+    if (typeof localStorage === 'undefined') {
+        return { ...defaults };
+    }
+    try {
+        const stored = localStorage.getItem(DAILY_GOAL_SETTINGS_STORAGE_KEY);
+        if (!stored) {
+            return { ...defaults };
+        }
+        const parsed = JSON.parse(stored);
+        const target = Math.min(30, Math.max(1, Number(parsed.target) || DEFAULT_DAILY_TARGET));
+        return { target };
+    } catch (error) {
+        console.warn('Unable to load daily goal settings:', error);
+        return { ...defaults };
+    }
+}
+
+function saveDailyGoalSettings(settings) {
+    if (typeof localStorage === 'undefined') {
+        return;
+    }
+    try {
+        localStorage.setItem(DAILY_GOAL_SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+    } catch (error) {
+        console.warn('Unable to save daily goal settings:', error);
+    }
+}
+
+function loadDailyGoalState() {
+    const defaults = { date: getTodayKey(), attempts: 0 };
+    if (typeof localStorage === 'undefined') {
+        return { ...defaults };
+    }
+    try {
+        const stored = localStorage.getItem(DAILY_GOAL_STORAGE_KEY);
+        if (!stored) {
+            return { ...defaults };
+        }
+        const parsed = JSON.parse(stored);
+        const attempts = Math.max(0, Number(parsed.attempts) || 0);
+        const date = typeof parsed.date === 'string' ? parsed.date : getTodayKey();
+        return { date, attempts };
+    } catch (error) {
+        console.warn('Unable to load daily goal progress:', error);
+        return { ...defaults };
+    }
+}
+
+function saveDailyGoalState(state) {
+    if (typeof localStorage === 'undefined') {
+        return;
+    }
+    try {
+        localStorage.setItem(DAILY_GOAL_STORAGE_KEY, JSON.stringify(state));
+    } catch (error) {
+        console.warn('Unable to save daily goal progress:', error);
+    }
+}
+
+function ensureDailyGoalState() {
+    const todayKey = getTodayKey();
+    if (!dailyGoalState || dailyGoalState.date !== todayKey) {
+        dailyGoalState = { date: todayKey, attempts: 0 };
+        saveDailyGoalState(dailyGoalState);
+    }
+}
+
+function updateDailyGoalUI() {
+    if (!dailyGoalProgressFill || !dailyGoalLabelEn || !dailyGoalLabelZh) {
+        return;
+    }
+    ensureDailyGoalState();
+    if (!dailyGoalSettings) {
+        dailyGoalSettings = loadDailyGoalSettings();
+    }
+
+    const target = Math.min(30, Math.max(1, Number(dailyGoalSettings.target) || DEFAULT_DAILY_TARGET));
+    const attempts = Math.max(0, Number(dailyGoalState.attempts) || 0);
+    const progress = clamp(attempts / target, 0, 1);
+
+    dailyGoalProgressFill.style.width = `${(progress * 100).toFixed(1)}%`;
+    const progressBar = dailyGoalProgressFill.parentElement;
+    if (progressBar) {
+        progressBar.setAttribute('aria-valuenow', attempts.toString());
+        progressBar.setAttribute('aria-valuemax', target.toString());
+    }
+
+    dailyGoalLabelEn.textContent = `Completed ${attempts} of ${target} attempts today`;
+    dailyGoalLabelZh.textContent = `今日完成 ${attempts} / ${target} 次練習`;
+
+    if (dailyGoalTargetInput) {
+        dailyGoalTargetInput.value = target;
+    }
+
+    updateLocalizedButton(resetDailyGoalButton);
+}
+
+function handleDailyGoalTargetChange(event) {
+    if (!dailyGoalTargetInput) return;
+    const value = Math.round(Number(event?.target?.value) || DEFAULT_DAILY_TARGET);
+    const clampedValue = Math.min(30, Math.max(1, value));
+    dailyGoalSettings = { target: clampedValue };
+    dailyGoalTargetInput.value = clampedValue;
+    saveDailyGoalSettings(dailyGoalSettings);
+    updateDailyGoalUI();
+}
+
+function resetDailyGoalForToday() {
+    ensureDailyGoalState();
+    dailyGoalState.attempts = 0;
+    dailyGoalState.date = getTodayKey();
+    saveDailyGoalState(dailyGoalState);
+    updateDailyGoalUI();
+}
+
+function recordDailyGoalAttempt() {
+    ensureDailyGoalState();
+    dailyGoalState.attempts = Math.min(999, (Number(dailyGoalState.attempts) || 0) + 1);
+    saveDailyGoalState(dailyGoalState);
+    updateDailyGoalUI();
+}
+
+function loadAttemptHistory() {
+    if (typeof localStorage === 'undefined') {
+        return [];
+    }
+    try {
+        const stored = localStorage.getItem(ATTEMPT_HISTORY_STORAGE_KEY);
+        if (!stored) {
+            return [];
+        }
+        const parsed = JSON.parse(stored);
+        if (!Array.isArray(parsed)) {
+            return [];
+        }
+        return parsed
+            .filter(entry => typeof entry === 'object' && entry)
+            .map(entry => ({
+                timestamp: Number(entry.timestamp) || Date.now(),
+                score: clamp(Number(entry.score) || 0, 0, 100)
+            }))
+            .slice(0, ATTEMPT_HISTORY_LIMIT);
+    } catch (error) {
+        console.warn('Unable to load attempt history:', error);
+        return [];
+    }
+}
+
+function saveAttemptHistory(history) {
+    if (typeof localStorage === 'undefined') {
+        return;
+    }
+    try {
+        localStorage.setItem(ATTEMPT_HISTORY_STORAGE_KEY, JSON.stringify(history));
+    } catch (error) {
+        console.warn('Unable to save attempt history:', error);
+    }
+}
+
+function createHistoryEntry(entry) {
+    const listItem = document.createElement('li');
+    listItem.classList.add('history-entry');
+
+    const scoreWrapper = document.createElement('div');
+    scoreWrapper.className = 'history-score';
+    const scoreText = formatPercentDisplay(entry.score);
+    const scoreEn = document.createElement('span');
+    scoreEn.setAttribute('lang', 'en');
+    scoreEn.textContent = `Score: ${scoreText}`;
+    const scoreZh = document.createElement('span');
+    scoreZh.setAttribute('lang', 'zh');
+    scoreZh.textContent = `得分: ${scoreText}`;
+    scoreWrapper.append(scoreEn, scoreZh);
+    listItem.appendChild(scoreWrapper);
+
+    const metaWrapper = document.createElement('div');
+    metaWrapper.className = 'history-entry-meta';
+    const timestamp = new Date(entry.timestamp);
+    const enMeta = document.createElement('span');
+    enMeta.setAttribute('lang', 'en');
+    enMeta.textContent = `Logged ${timestamp.toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    })}`;
+    const zhMeta = document.createElement('span');
+    zhMeta.setAttribute('lang', 'zh');
+    zhMeta.textContent = `記錄於 ${timestamp.toLocaleString('zh-HK', {
+        month: 'numeric',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    })}`;
+    metaWrapper.append(enMeta, zhMeta);
+    listItem.appendChild(metaWrapper);
+
+    return listItem;
+}
+
+function updateAttemptHistoryUI() {
+    if (!attemptHistoryList) {
+        return;
+    }
+    attemptHistoryList.innerHTML = '';
+
+    if (!attemptHistory.length) {
+        const emptyItem = document.createElement('li');
+        emptyItem.classList.add('history-empty-state');
+        const emptyEn = document.createElement('span');
+        emptyEn.setAttribute('lang', 'en');
+        emptyEn.textContent = 'Complete an attempt to start your timeline.';
+        const emptyZh = document.createElement('span');
+        emptyZh.setAttribute('lang', 'zh');
+        emptyZh.textContent = '完成一次練習嚟建立時間線。';
+        emptyItem.append(emptyEn, emptyZh);
+        attemptHistoryList.appendChild(emptyItem);
+        updateLanguageVisibility();
+        return;
+    }
+
+    attemptHistory.forEach(entry => {
+        const node = createHistoryEntry(entry);
+        attemptHistoryList.appendChild(node);
+    });
+    updateLanguageVisibility();
+}
+
+function recordAttemptHistoryEntry(score) {
+    const safeScore = clamp(Number(score) || 0, 0, 100);
+    const entry = {
+        timestamp: Date.now(),
+        score: safeScore
+    };
+    attemptHistory.unshift(entry);
+    if (attemptHistory.length > ATTEMPT_HISTORY_LIMIT) {
+        attemptHistory = attemptHistory.slice(0, ATTEMPT_HISTORY_LIMIT);
+    }
+    saveAttemptHistory(attemptHistory);
+    updateAttemptHistoryUI();
+}
+
+function loadStoredTipIndex() {
+    if (typeof localStorage === 'undefined') {
+        return null;
+    }
+    try {
+        const stored = localStorage.getItem(TIP_STORAGE_KEY);
+        if (stored === null) {
+            return null;
+        }
+        const index = Number(stored);
+        if (Number.isInteger(index) && index >= 0 && index < PRACTICE_TIPS.length) {
+            return index;
+        }
+        return null;
+    } catch (error) {
+        console.warn('Unable to load last practice tip index:', error);
+        return null;
+    }
+}
+
+function saveTipIndex(index) {
+    if (typeof localStorage === 'undefined') {
+        return;
+    }
+    try {
+        localStorage.setItem(TIP_STORAGE_KEY, String(index));
+    } catch (error) {
+        console.warn('Unable to save tip index:', error);
+    }
+}
+
+function updatePracticeTipUI() {
+    if (!practiceTipEn || !practiceTipZh) {
+        return;
+    }
+    if (!PRACTICE_TIPS.length) {
+        practiceTipEn.textContent = '';
+        practiceTipZh.textContent = '';
+        return;
+    }
+    const tip = PRACTICE_TIPS[currentTipIndex % PRACTICE_TIPS.length];
+    practiceTipEn.textContent = tip.en;
+    practiceTipZh.textContent = tip.zh;
+    updateLocalizedButton(nextTipButton);
+    updateLanguageVisibility();
+}
+
+function showNextTip() {
+    if (!PRACTICE_TIPS.length) {
+        return;
+    }
+    currentTipIndex = (currentTipIndex + 1) % PRACTICE_TIPS.length;
+    saveTipIndex(currentTipIndex);
+    updatePracticeTipUI();
+}
+
+function initializePracticeTip() {
+    if (!PRACTICE_TIPS.length) {
+        return;
+    }
+    const storedIndex = loadStoredTipIndex();
+    if (storedIndex !== null) {
+        currentTipIndex = storedIndex;
+    } else {
+        currentTipIndex = Math.floor(Math.random() * PRACTICE_TIPS.length);
+    }
+    updatePracticeTipUI();
+}
+
+function updateConnectionStatus({ isInitial = false } = {}) {
+    if (!connectionStatusBanner) {
+        return;
+    }
+    const enCopy = connectionStatusBanner.querySelector('[lang="en"]');
+    const zhCopy = connectionStatusBanner.querySelector('[lang="zh"]');
+    const isOnline = navigator.onLine !== false;
+
+    if (isOnline) {
+        if (isInitial) {
+            connectionStatusBanner.classList.remove('is-visible');
+            return;
+        }
+        if (enCopy) {
+            enCopy.textContent = CONNECTION_MESSAGES.online.en;
+        }
+        if (zhCopy) {
+            zhCopy.textContent = CONNECTION_MESSAGES.online.zh;
+        }
+        connectionStatusBanner.classList.add('is-visible');
+        if (connectionStatusTimeoutId) {
+            clearTimeout(connectionStatusTimeoutId);
+        }
+        connectionStatusTimeoutId = window.setTimeout(() => {
+            connectionStatusBanner.classList.remove('is-visible');
+            connectionStatusTimeoutId = null;
+        }, 3200);
+    } else {
+        if (connectionStatusTimeoutId) {
+            clearTimeout(connectionStatusTimeoutId);
+            connectionStatusTimeoutId = null;
+        }
+        if (enCopy) {
+            enCopy.textContent = CONNECTION_MESSAGES.offline.en;
+        }
+        if (zhCopy) {
+            zhCopy.textContent = CONNECTION_MESSAGES.offline.zh;
+        }
+        connectionStatusBanner.classList.add('is-visible');
+    }
+    updateLanguageVisibility();
+}
+
 function recordAttempt(score) {
     const safeScore = clamp(Number(score) || 0, 0, 100);
     sessionStats.attempts += 1;
@@ -152,6 +600,9 @@ function recordAttempt(score) {
     } else {
         sessionStats.currentStreak = 0;
     }
+
+    recordDailyGoalAttempt();
+    recordAttemptHistoryEntry(safeScore);
 
     saveSessionStats();
     updateSessionStatsUI();
@@ -931,19 +1382,25 @@ if (replayButton) {
     replayButton.addEventListener('click', replayDrawing);
 }
 
+if (nextTipButton) {
+    nextTipButton.addEventListener('click', showNextTip);
+}
+
+if (dailyGoalTargetInput) {
+    dailyGoalTargetInput.addEventListener('change', handleDailyGoalTargetChange);
+    dailyGoalTargetInput.addEventListener('blur', handleDailyGoalTargetChange);
+}
+
+if (resetDailyGoalButton) {
+    resetDailyGoalButton.addEventListener('click', resetDailyGoalForToday);
+}
+
 function toggleLanguage() {
     const currentLang = document.documentElement.lang;
     const newLang = currentLang === 'en' ? 'zh' : 'en';
     document.documentElement.lang = newLang;
-    
-    // Toggle active class on language elements
-    document.querySelectorAll('[lang]').forEach(el => {
-        if (el.getAttribute('lang') === newLang) {
-            el.classList.add('active');
-        } else {
-            el.classList.remove('active');
-        }
-    });
+
+    updateLanguageVisibility();
 
     // Update score text based on language
     const storedScore = Number(scoreDiv.dataset.score || 0);
@@ -951,6 +1408,11 @@ function toggleLanguage() {
     updateToggleOverlayLabel();
     updateReplayButtonLabel();
     updateAnalysisSummary(lastEvaluation);
+    updateLocalizedButton(resetDailyGoalButton);
+    updateLocalizedButton(nextTipButton);
+    updateDailyGoalUI();
+    updatePracticeTipUI();
+    updateAttemptHistoryUI();
 }
 
 // Initialize language
@@ -958,6 +1420,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const userLang = navigator.language || navigator.userLanguage;
     const initialLang = userLang.startsWith('zh') ? 'zh' : 'en';
     document.documentElement.lang = initialLang;
+
+    updateLanguageVisibility();
 
     // Update initial score text based on language
     updateScoreText(0);
@@ -968,10 +1432,6 @@ document.addEventListener('DOMContentLoaded', () => {
     updateGuidanceAvailability();
     updateAnalysisSummary(null);
 
-    document.querySelectorAll(`[lang="${initialLang}"]`).forEach(el => {
-        el.classList.add('active');
-    });
-
     try {
         sessionStats = loadSessionStats();
     } catch (error) {
@@ -979,6 +1439,16 @@ document.addEventListener('DOMContentLoaded', () => {
         sessionStats = { ...DEFAULT_SESSION_STATS };
     }
     updateSessionStatsUI();
+
+    dailyGoalSettings = loadDailyGoalSettings();
+    dailyGoalState = loadDailyGoalState();
+    attemptHistory = loadAttemptHistory();
+    updateDailyGoalUI();
+    updateLocalizedButton(resetDailyGoalButton);
+    updateLocalizedButton(nextTipButton);
+    initializePracticeTip();
+    updateAttemptHistoryUI();
+    updateConnectionStatus({ isInitial: true });
 });
 
 // Replace the calculateScore function with this improved version
@@ -1129,3 +1599,19 @@ function calculateScore() {
         userPixelCount: userCount
     };
 }
+
+window.addEventListener('online', () => updateConnectionStatus());
+window.addEventListener('offline', () => updateConnectionStatus());
+
+function registerServiceWorker() {
+    if (!('serviceWorker' in navigator) || !window.isSecureContext) {
+        return;
+    }
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js').catch(error => {
+            console.warn('Service worker registration failed:', error);
+        });
+    });
+}
+
+registerServiceWorker();
