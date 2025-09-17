@@ -1,0 +1,22 @@
+{
+  "name": "Draw The Word: Fong Chung Sir",
+  "short_name": "Write Sir",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#2ecc71",
+  "description": "Practice the classic \"sir\" character with guided tracing, progress tracking, and offline support.",
+  "icons": [
+    {
+      "src": "./assets/images/icon.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "./assets/images/icon.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ]
+}

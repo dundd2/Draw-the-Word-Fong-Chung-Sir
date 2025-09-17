@@ -14,6 +14,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <meta name="apple-mobile-web-app-title" content="Writing Sir">
     <meta name="theme-color" content="#2ecc71">
+    <link rel="manifest" href="./manifest.webmanifest">
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="./assets/images/icon.png">
     <link rel="apple-touch-icon" href="./assets/images/icon.png">
@@ -22,7 +23,12 @@
 </head>
 <body>
     <button class="language-switch" onclick="toggleLanguage()">中文 / English</button>
-    
+
+    <div id="connectionStatus" class="connection-status" role="status" aria-live="polite">
+        <span lang="en">You are working offline. Saved progress and guides are still available.</span>
+        <span lang="zh">目前處於離線狀態，已儲存嘅進度同指引仍然可用。</span>
+    </div>
+
     <div class="container">
         <h1 class="rainbow-title" lang="en">Draw the Chinese Word "Sir"</h1>
         <h1 class="rainbow-title" lang="zh">點寫方中sir</h1>
@@ -155,6 +161,75 @@
                     <button id="replayButton" class="replay-btn" data-label-en="Replay my strokes" data-label-zh="重播我嘅筆畫">Replay my strokes</button>
                     <button id="toggleOverlay" class="guidance-btn" data-label-en="Show guidance overlay" data-label-zh="顯示指引覆蓋層" data-hide-label-en="Hide guidance overlay" data-hide-label-zh="隱藏指引覆蓋層">Show guidance overlay</button>
                     <div id="analysisSummary" class="analysis-summary" aria-live="polite"></div>
+                </div>
+
+                <div class="practice-insights">
+                    <section class="insight-card daily-goal-card" aria-labelledby="dailyGoalHeading">
+                        <div class="card-header">
+                            <h2 id="dailyGoalHeading">
+                                <span lang="en">Daily practice goal</span>
+                                <span lang="zh">每日練習目標</span>
+                            </h2>
+                        </div>
+                        <p class="card-description">
+                            <span lang="en">Set a target and keep the habit alive.</span>
+                            <span lang="zh">訂個目標，保持練習習慣。</span>
+                        </p>
+                        <div class="daily-goal-config">
+                            <label for="dailyGoalTarget">
+                                <span lang="en">Target attempts</span>
+                                <span lang="zh">目標練習次數</span>
+                            </label>
+                            <input type="number" id="dailyGoalTarget" min="1" max="30" value="5" aria-describedby="dailyGoalLabelEn dailyGoalLabelZh">
+                        </div>
+                        <div class="daily-goal-progress" role="progressbar" aria-live="polite" aria-describedby="dailyGoalLabelEn dailyGoalLabelZh" aria-valuemin="0" aria-valuemax="30">
+                            <div id="dailyGoalProgressFill" class="daily-goal-progress-fill"></div>
+                        </div>
+                        <p class="daily-goal-status">
+                            <span id="dailyGoalLabelEn" lang="en">0 of 5 attempts logged</span>
+                            <span id="dailyGoalLabelZh" lang="zh">已完成 0 / 5 次練習</span>
+                        </p>
+                        <button id="resetDailyGoal" class="secondary-btn" type="button" data-label-en="Reset today" data-label-zh="重設今日記錄">Reset today</button>
+                    </section>
+
+                    <section class="insight-card tip-card" aria-labelledby="practiceTipHeading">
+                        <div class="card-header">
+                            <h2 id="practiceTipHeading">
+                                <span lang="en">Practice spotlight</span>
+                                <span lang="zh">練習小貼士</span>
+                            </h2>
+                        </div>
+                        <p class="card-description">
+                            <span lang="en">Refresh for a new focus each round.</span>
+                            <span lang="zh">每次練習前睇睇重點。</span>
+                        </p>
+                        <div class="tip-body">
+                            <p class="tip-text">
+                                <span id="practiceTipEn" lang="en"></span>
+                                <span id="practiceTipZh" lang="zh"></span>
+                            </p>
+                            <button id="nextTipButton" class="secondary-btn" type="button" data-label-en="Show another tip" data-label-zh="睇下一個貼士">Show another tip</button>
+                        </div>
+                    </section>
+
+                    <section class="insight-card history-card" aria-labelledby="attemptHistoryHeading">
+                        <div class="card-header">
+                            <h2 id="attemptHistoryHeading">
+                                <span lang="en">Recent attempts</span>
+                                <span lang="zh">最近幾次成績</span>
+                            </h2>
+                        </div>
+                        <p class="card-description">
+                            <span lang="en">Track your momentum at a glance.</span>
+                            <span lang="zh">一眼睇晒最近嘅表現。</span>
+                        </p>
+                        <ol id="attemptHistoryList" class="attempt-history-list" aria-live="polite">
+                            <li class="history-empty-state">
+                                <span id="historyEmptyStateEn" lang="en">Complete an attempt to start your timeline.</span>
+                                <span id="historyEmptyStateZh" lang="zh">完成一次練習嚟建立時間線。</span>
+                            </li>
+                        </ol>
+                    </section>
                 </div>
             </div>
         </div>

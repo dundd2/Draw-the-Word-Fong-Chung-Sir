@@ -17,6 +17,12 @@ You can play "Draw-The-Word-Fong-Chung-Sir 點寫方中sir" in two ways:
 
    - Simply visit this link in your web browser: [https://dundd2.github.io/Draw-the-Word-Fong-Chung-Sir/](https://dundd2.github.io/Draw-the-Word-Fong-Chung-Sir/)
 
+### Progressive Web App Support
+
+- Install the web experience to your home screen or desktop directly from supported browsers.
+- Enjoy offline practice thanks to cached assets, persistent stats, and the new connection banner that lets you know when you're offline or back online.
+- Daily goals, tips, and attempt history continue to work without a network connection.
+
 **2. Play Offline (Standalone Application):**
 The standalone executable is built using **Electron**, allowing for a cross-platform desktop experience.
 
@@ -63,6 +69,10 @@ The user interface is built with HTML and CSS, providing a responsive and intera
 - **Color Picker**: Allows users to select the drawing color.
 - **Line Width Selector**: Enables users to adjust the thickness of their drawing strokes.
 - **Undo and Reset Buttons**: Provide controls to undo the last stroke or reset the entire canvas.
+- **Daily Practice Goal**: Set a personal target and watch the progress bar fill as you log attempts.
+- **Practice Spotlight Tips**: Cycle through bilingual tips tailored to improve pen control and accuracy.
+- **Recent Attempts Timeline**: Review your latest scores with timestamps to spot progress trends.
+- **Offline-Ready Interface**: Smart caching keeps the tracing guide, stats, and sounds available even without a connection.
 
 ## Credits
   - TensorFlow.js: Image processing and pattern recognition
