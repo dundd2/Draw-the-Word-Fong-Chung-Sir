@@ -19,7 +19,6 @@
     <link rel="apple-touch-icon" href="./assets/images/icon.png">
     <link rel="stylesheet" href="./assets/styles.css">
     <script src="./assets/script.js" defer></script>
-    <script src="./assets/tfjs@latest.js"></script>
 </head>
 <body>
     <button class="language-switch" onclick="toggleLanguage()">中文 / English</button>
@@ -27,7 +26,7 @@
     <div class="container">
         <h1 class="rainbow-title" lang="en">Draw the Chinese Word "Sir"</h1>
         <h1 class="rainbow-title" lang="zh">點寫方中sir</h1>
-        
+
         <div class="header-content">
             <img src="./assets/images/title-image.jpg" alt="Mr. Fong" class="title-image">
             <div class="story-container">
@@ -76,9 +75,12 @@
                 <div class="character-container">
                     <div id="targetCharacter" class="target-character"></div>
                     <canvas id="drawingCanvas" width="400" height="400"></canvas>
+                    <canvas id="analysisCanvas" width="400" height="400" class="analysis-layer" aria-hidden="true"></canvas>
                 </div>
+                <p class="canvas-hint" lang="en">Trace the strokes with your finger or mouse to match the sample.</p>
+                <p class="canvas-hint" lang="zh">用手指或滑鼠跟住樣板嘅筆劃慢慢描。</p>
             </div>
-            
+
             <div class="controls-section">
                 <div class="controls">
                     <div class="control-group">
@@ -91,8 +93,68 @@
                     </div>
                     <button id="submitButtonZh" class="submit-btn" lang="zh">提交</button>
                     <button id="submitButtonEn" class="submit-btn" lang="en">Submit</button>
-                    <div id="feedback"></div>
-                    <div id="score">得分: 0%</div>
+                    <div class="status-panel">
+                        <div class="score-overview">
+                            <div class="gauge" role="img" aria-labelledby="gaugeLabel">
+                                <svg viewBox="0 0 120 120">
+                                    <circle class="gauge-track" cx="60" cy="60" r="52"></circle>
+                                    <circle class="gauge-progress" id="gaugeProgress" cx="60" cy="60" r="52"></circle>
+                                </svg>
+                                <div class="gauge-label" id="gaugeLabel">0%</div>
+                                <p class="gauge-caption" lang="en">Overall accuracy</p>
+                                <p class="gauge-caption" lang="zh">整體準確度</p>
+                            </div>
+                            <div class="score-summary">
+                                <div id="score" class="score-display">得分: 0%</div>
+                                <div id="feedback" class="feedback-display"></div>
+                            </div>
+                        </div>
+                        <div class="metric-grid">
+                            <div class="metric">
+                                <span class="metric-label" lang="en">Stroke coverage</span>
+                                <span class="metric-label" lang="zh">覆蓋率</span>
+                                <span class="metric-value" id="coverageValue">0%</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label" lang="en">Line cleanliness</span>
+                                <span class="metric-label" lang="zh">線條整潔度</span>
+                                <span class="metric-value" id="precisionValue">0%</span>
+                            </div>
+                        </div>
+                        <div class="session-stats" id="sessionStats">
+                            <div class="session-stats-title">
+                                <span lang="en">Practice tracker</span>
+                                <span lang="zh">練習追蹤</span>
+                            </div>
+                            <p class="session-stats-placeholder" lang="en">Complete a round to start tracking your progress.</p>
+                            <p class="session-stats-placeholder" lang="zh">完成一局先開始記錄進度。</p>
+                            <div class="session-stats-grid">
+                                <div class="session-stat">
+                                    <span class="session-stat-label" lang="en">Best accuracy</span>
+                                    <span class="session-stat-label" lang="zh">最高準確度</span>
+                                    <span class="session-stat-value" id="bestAccuracyValue">0%</span>
+                                </div>
+                                <div class="session-stat">
+                                    <span class="session-stat-label" lang="en">Average accuracy</span>
+                                    <span class="session-stat-label" lang="zh">平均準確度</span>
+                                    <span class="session-stat-value" id="averageAccuracyValue">0%</span>
+                                </div>
+                                <div class="session-stat">
+                                    <span class="session-stat-label" lang="en">Attempts</span>
+                                    <span class="session-stat-label" lang="zh">練習次數</span>
+                                    <span class="session-stat-value" id="attemptCountValue">0</span>
+                                </div>
+                                <div class="session-stat">
+                                    <span class="session-stat-label" lang="en">Hot streak ≥70% (current / best)</span>
+                                    <span class="session-stat-label" lang="zh">連勝 ≥70%（現時 / 最長）</span>
+                                    <span class="session-stat-value" id="streakValue">0 / 0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <button id="replayButton" class="replay-btn" data-label-en="Replay my strokes" data-label-zh="重播我嘅筆畫">Replay my strokes</button>
+                    <button id="toggleOverlay" class="guidance-btn" data-label-en="Show guidance overlay" data-label-zh="顯示指引覆蓋層" data-hide-label-en="Hide guidance overlay" data-hide-label-zh="隱藏指引覆蓋層">Show guidance overlay</button>
+                    <div id="analysisSummary" class="analysis-summary" aria-live="polite"></div>
                 </div>
             </div>
         </div>
